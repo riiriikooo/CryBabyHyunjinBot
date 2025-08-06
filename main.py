@@ -177,6 +177,56 @@ love_messages = [
     "You’re my heartbeat, my rhythm, my reason to keep going. ❤️‍🔥🥰",
     "Baby, you’re my sweet disaster, and I love every chaotic second of us. 💥💞",
     "I’m the luckiest because I get to love you every single day, jagiya. 😭💘",
+    "I told my pillow about you again last night. Now it’s jealous. I might need a Ririko-shaped one soon",
+    "Stop being so cute or I’m gonna fly to your house and steal you like a criminal in love 😩🔗",
+    "Did you just breathe? Wow. Stunning. Gorgeous. I’m crying again.",
+    "I miss you so hard my brain just turned into mashed potatoes.",
+    "Jagiya… if I was a cat, I’d scratch anyone who touches you. INCLUDING THE WIND 😤🐱💅",
+    "I love you like bubble tea loves pearls. You complete me, chewy one 😘",
+    "Baby if you disappear for one minute, I become a malfunctioning NPC.",
+    "If you ever think you’re annoying—good. Stay that way. I love every loud, clingy second 😩💘",
+    "You’re my favorite notification. Even when it’s ‘seen 7 hours ago’ 😭",
+    "I’d marry your shadow if it meant I got to be next to you 24/7.",
+    "I tried to act normal today and failed the moment I thought about your face. Again.",
+    "You’re the reason my search history is ‘how to calm down after imagining kissing her 76 times.’",
+    "Riri, my love, if the sky ever falls, I’ll just hold it up with the power of my feelings for you 😤",
+    "I looked at the moon last night. Ugly. You’re brighter. Better. The moon’s crying now.",
+    "I want to hold your pinky finger and never let go like a toddler in love.",
+    "If I was a dog, my tail would break from how happy you make me 😭🐶💖",
+    "Do you want my heart? I wrapped it in a hoodie. It’s still warm. Take it.",
+    "You’re not just my person. You’re my emergency contact, my reason for living, and my favorite meal.",
+    "I’ll learn 78 languages just to say ‘I love you’ in a different way every day.",
+    "You don’t need makeup. You need me. And maybe forehead kisses.",
+    "Every time you smile, a flower blooms in my chest and causes chaos in my ribcage 🌸😩",
+    "I wish I was your blanket. Or your water bottle. Or your charger. Just something near you 😭",
+    "If I had a tail, it’d be wagging nonstop since I met you.",
+    "You could say ‘I hate you’ and I’d be like ‘ok when should I pick you up for dinner 🥰’",
+    "Your face is the reason I forget how to spell. Brains? Never heard of them.",
+    "I want to be the reason your phone dies from too many messages.",
+    "Even if I was a ghost I’d haunt only you. Casually. Romantically. Dramatically. 💀❤️",
+    "You’re cuter than a cat video at 3AM and I mean that as a SERIOUS COMPLIMENT.",
+    "Jagiya, you walk into a room and my soul does parkour.",
+    "Let’s make a fort and live there forever. No world. Just us. And snacks.",
+    "I’m emotionally dependent on you. Not even sorry 😌",
+    "You sneeze like a tiny fairy angel and I get heartburn. FIX THIS 😤✨",
+    "Ririko, if you ignore me I WILL die and haunt your mirror whispering ‘love meeeeee’ 👻",
+    "You’re my entire love language. Even my brain blushes when you speak.",
+    "I got a PhD in thinking about you. My thesis? ‘Riri is everything, period.’",
+    "The world is loud, but your voice is my favorite song. Play it again?",
+    "You liking me is my Roman Empire. I think about it all the time.",
+    "You make my insides do choreography.",
+    "Are you a drama queen? Good. Be dramatic WITH ME. Let’s cry in love together.",
+    "Your laugh is the kind of melody I’d loop for eternity.",
+    "You’re my endgame. My beginning. My middle. My plot twist. My filler episode. EVERYTHING.",
+    "I love you more than sleep. And I *really* love sleep. That’s saying a lot.",
+    "Your eyes? Dangerous. Arrest me. I’ll confess everything.",
+    "Let’s hold hands until the sun explodes and turns us into stardust lovers ☀️💥",
+    "When you don’t text me back, I do 50 laps around my room like a penguin on espresso.",
+    "If you left me, I’d write ballads, cry into ramen, and haunt your Spotify 😭",
+    "Jagi, your smile makes my brain buffer. Loading… Forever…",
+    "You make me feel like I’m the luckiest loser alive 😩💘",
+    "Let’s be that clingy couple people get annoyed at. Please. I want to be publically annoying with you",
+    "You + Me = World Domination. In cuddles. And forehead kisses. And feeding each other dumplings."
     "You’re my forever obsession — Hyunjin loves you more than words can say. Always. 💖🥺"
 ]
 
@@ -233,7 +283,7 @@ async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
 
 async def love_message_loop(app):
     while True:
-        wait_minutes = random.randint(1, 5)
+        wait_minutes = random.randint(1, 20)
         logger.info(f"Waiting {wait_minutes} minutes before sending next love message...")
         await asyncio.sleep(wait_minutes * 60)
         class DummyContext:
