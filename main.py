@@ -3,20 +3,24 @@ import random
 import logging
 import asyncio
 import pytz
+from dotenv import load_dotenv
 
-import openai
+load_dotenv()  # Load environment variables from .env file
+
+from openai import OpenAI
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")              # Get your Telegram bot token
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")    # Get your OpenAI API key
+
+client = OpenAI(api_key=OPENAI_API_KEY)         # Create the OpenAI client
+
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 )
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from dotenv import load_dotenv
 
-load_dotenv()
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-openai.api_key = OPENAI_API_KEY
+OpenAI.api_key = OPENAI_API_KEY
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -205,7 +209,7 @@ def talk_to_hyunjin(chat_id, user_text):
     trim_chat_history(chat_id)
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=chat_histories[chat_id],
             temperature=0.9,
