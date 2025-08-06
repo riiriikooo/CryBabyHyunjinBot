@@ -5,3 +5,5 @@ apscheduler
 python-dotenv
 urllib3
 six
+nest_asyncio
+telegram
