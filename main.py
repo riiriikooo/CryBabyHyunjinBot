@@ -775,10 +775,12 @@ async def main():
     diary_handler = get_diary_handler()
     application.add_handler(diary_handler)
 
-    # Add the reminder handlers from reminder.py
-    from commands.reminder import get_handlers as get_reminder_handler
-    for handler in get_reminder_handler():
+    # Reminders
+    for handler in get_reminder_handlers():
         application.add_handler(handler)
+
+    # Catch-all OpenAI chat (LAST so it doesn't hijack reminder inputs)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Singapore"))
     scheduler.start()

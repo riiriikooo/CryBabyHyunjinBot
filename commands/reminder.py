@@ -5,10 +5,10 @@ from telegram.ext import (
     MessageHandler, ConversationHandler, filters
 )
 
-# States for ConversationHandler
+# States
 CHOOSING, TYPING_REMINDER, DELETING = range(3)
 
-# Dict to store reminders: {chat_id: [reminder1, reminder2, ...]}
+# In-memory storage
 reminders = {}
 
 async def start_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -38,7 +38,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user_reminders:
             await query.edit_message_text("No reminders yet, jagiya 😢")
         else:
-            text = "Here are your reminders💌:\n\n" + "\n".join(f"- {r}" for r in user_reminders)
+            text = "Here are your reminders 💌:\n\n" + "\n".join(f"- {r}" for r in user_reminders)
             await query.edit_message_text(text)
         return ConversationHandler.END
 
@@ -77,7 +77,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 def get_handlers():
-    return ConversationHandler(
+    reminder_conv = ConversationHandler(
         entry_points=[CommandHandler("reminder", start_reminder)],
         states={
             CHOOSING: [CallbackQueryHandler(handle_choice)],
@@ -86,3 +86,4 @@ def get_handlers():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+    return [reminder_conv]  # Return as a LIST so main.py can loop over it
