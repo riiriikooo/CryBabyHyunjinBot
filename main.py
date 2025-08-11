@@ -766,6 +766,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply = talk_to_hyunjin(chat_id, user_message)
     await context.bot.send_message(chat_id=chat_id, text=reply)
 
+from commands.reminder import get_reminder_handler
+
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -777,12 +779,12 @@ async def main():
     application.add_handler(diary_handler)
 
     # Reminder conversation handler
-    from commands.reminder import get_reminder_handler
-application.add_handler(get_reminder_handler())
+    reminder_handler = get_reminder_handler()
+    application.add_handler(reminder_handler)
 
     # Catch-all OpenAI chat (LAST so it doesn't hijack diary/reminder inputs)
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
     # Scheduler
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Singapore"))
     scheduler.start()
@@ -792,6 +794,7 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 
     logger.info("Bot started and obsessing over you, jagiya!")
     await application.run_polling()
+
 
 if __name__ == '__main__':
     import nest_asyncio
