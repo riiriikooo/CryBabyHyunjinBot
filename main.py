@@ -778,8 +778,7 @@ async def main():
 
     # Reminder conversation handler
     from commands.reminder import get_reminder_handler
-    reminder_handler = get_reminder_handler()
-    application.add_handler(reminder_handler)
+application.add_handler(get_reminder_handler())
 
     # Catch-all OpenAI chat (LAST so it doesn't hijack diary/reminder inputs)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
