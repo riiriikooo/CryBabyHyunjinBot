@@ -16,11 +16,24 @@ SHEET_NAME = "PAHyunjin_Diary"
 WAITING_FOR_DIARY = 1
 
 PROMPTS = [
-    "Baby, tell me everything that happened today~ 💌",
-    "How was your day, cutie? I’m listening like always 🥺",
-    "Jagiya~ what’s on your mind tonight? 🌙",
-    "Write your heart out for me, I’m hugging every word 🧸",
+    "Tell me everything that happened today~ 💌",
+    "How was your day? I’m listening like always 🥺",
+    "What wild chaos happened today? Tell Hyunjin everything, NOW! 😝💥",
     "Tell Hyunjin everything before bed, hmm? 😚",
+    "Write, my sweetest! 🌸"
+    "Words from you = magic! ✨"
+    "Tell me your day in sparkles! ✨✨"
+    "Tell me all the cute things! 🐰💕"
+    "Your diary lights up my world! 💡✨"
+    "Write~ and I’ll cherish it forever! 🥰💝"
+    "Share a secret you’ve never told me! 🤫❤️"
+    "What’s a funny thing that happened today? Make me laugh! 😂💕"
+    "What’s something you’re grateful for today? I’m grateful for you! 🙏❤️"
+    "Tell me one thing you want me to never forget about you! I’m all ears! 👂💖"
+    "Tell me about a tiny moment that made you go “aww!” 🥺💕"
+    "What’s a tiny act of kindness you noticed or did today? You’re my angel! 😇💕"
+    "What’s something you want to remember forever? I’ll keep it safe! 🔒💝"
+    "What’s a gentle reminder you want to give yourself right now? 💌💫"
 ]
 
 def connect_sheet():
