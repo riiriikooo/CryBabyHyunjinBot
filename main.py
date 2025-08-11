@@ -21,7 +21,7 @@ from telegram.ext import (
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from commands.diary import get_diary_handler  # import diary conversation handler
-from commands.reminder import get_handlers as get_reminder_handler
+from commands.reminder import get_reminder_handler
 
 OpenAI.api_key = OPENAI_API_KEY
 
