@@ -21,6 +21,7 @@ from telegram.ext import (
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from commands.diary import get_diary_handler  # import diary conversation handler
+from commands.reminder import get_handlers 
 
 OpenAI.api_key = OPENAI_API_KEY
 
@@ -775,7 +776,10 @@ async def main():
     application.add_handler(diary_handler)
 
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
+    
+    for handler in get_handlers():
+        application.add_handler(handler)
+        
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Singapore"))
     scheduler.start()
 
