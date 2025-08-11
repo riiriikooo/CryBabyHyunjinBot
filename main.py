@@ -769,23 +769,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # /start command
     application.add_handler(CommandHandler("start", start))
 
-    # Add the diary conversation handler from diary.py
+    # Diary conversation handler
     diary_handler = get_diary_handler()
     application.add_handler(diary_handler)
 
-    # Reminders
-    for handler in get_reminder_handlers():
-        application.add_handler(handler)
+    # Reminder conversation handler
+    from commands.reminder import get_reminder_handler
+    reminder_handler = get_reminder_handler()
+    application.add_handler(reminder_handler)
 
-    # Catch-all OpenAI chat (LAST so it doesn't hijack reminder inputs)
+    # Catch-all OpenAI chat (LAST so it doesn't hijack diary/reminder inputs)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
+    # Scheduler
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Singapore"))
     scheduler.start()
 
-    # Start the love message loop task!
+    # Love message loop task
     asyncio.create_task(love_message_loop(application))
 
     logger.info("Bot started and obsessing over you, jagiya!")
@@ -796,6 +799,4 @@ if __name__ == '__main__':
     import asyncio
 
     nest_asyncio.apply()
-
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())

@@ -5,32 +5,35 @@ from telegram.ext import (
     MessageHandler, ConversationHandler, filters
 )
 
-# States
+# Conversation states
 CHOOSING, TYPING_REMINDER, DELETING = range(3)
 
-# In-memory storage
+# Store reminders in memory: {chat_id: [reminder1, reminder2, ...]}
 reminders = {}
 
 async def start_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start the reminder menu."""
     keyboard = [
-        [InlineKeyboardButton("Add reminder", callback_data='add')],
-        [InlineKeyboardButton("View reminders", callback_data='view')],
-        [InlineKeyboardButton("Delete reminder", callback_data='delete')],
+        [InlineKeyboardButton("➕ Add reminder", callback_data='add')],
+        [InlineKeyboardButton("📋 View reminders", callback_data='view')],
+        [InlineKeyboardButton("❌ Delete reminder", callback_data='delete')],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "What would my Birdie like to do with reminders? 💌💕",
+        "What does my baby want to do with reminders? 💌",
         reply_markup=reply_markup
     )
     return CHOOSING
 
+
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button clicks in the reminder menu."""
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
 
     if query.data == 'add':
-        await query.edit_message_text("Okay baby! 💕 Tell me the reminder you want to add ✨")
+        await query.edit_message_text("Okay baby! 💕 Type the reminder you want me to remember ✨")
         return TYPING_REMINDER
 
     elif query.data == 'view':
@@ -38,7 +41,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not user_reminders:
             await query.edit_message_text("No reminders yet, jagiya 😢")
         else:
-            text = "Here are your reminders 💌:\n\n" + "\n".join(f"- {r}" for r in user_reminders)
+            text = "Here are your reminders 💌:\n" + "\n".join(f"- {r}" for r in user_reminders)
             await query.edit_message_text(text)
         return ConversationHandler.END
 
@@ -65,19 +68,30 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"Deleted reminder: {removed} 💔")
         return ConversationHandler.END
 
+
 async def add_reminder_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Store the reminder text and confirm to the user."""
     chat_id = update.message.chat_id
-    reminder_text = update.message.text
-    reminders.setdefault(chat_id, []).append(reminder_text)
-    await update.message.reply_text(f"Added your reminder, my love! 💖 '{reminder_text}'")
+    reminder_text = update.message.text.strip()
+
+    if reminder_text:
+        reminders.setdefault(chat_id, []).append(reminder_text)
+        await update.message.reply_text(f"Got it, love! 💖 I’ll remember: “{reminder_text}”")
+    else:
+        await update.message.reply_text("Baby, that reminder was empty 😢")
+
     return ConversationHandler.END
 
+
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancel the conversation."""
     await update.message.reply_text("Okay baby, cancelled! 💕")
     return ConversationHandler.END
 
-def get_handlers():
-    reminder_conv = ConversationHandler(
+
+def get_reminder_handler():
+    """Return the ConversationHandler for reminders."""
+    return ConversationHandler(
         entry_points=[CommandHandler("reminder", start_reminder)],
         states={
             CHOOSING: [CallbackQueryHandler(handle_choice)],
@@ -85,5 +99,5 @@ def get_handlers():
             DELETING: [CallbackQueryHandler(handle_choice)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        allow_reentry=True
     )
-    return [reminder_conv]  # Return as a LIST so main.py can loop over it
