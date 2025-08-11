@@ -53,7 +53,7 @@ async def reminder_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("Hmm, I couldn’t find that reminder, jagi!")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
+    chat_id = update.message.chat.id
     if context.user_data.get('awaiting_reminder'):
         reminder_text = update.message.text
         reminders.setdefault(chat_id, []).append(reminder_text)
