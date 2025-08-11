@@ -781,7 +781,7 @@ async def main():
 application.add_handler(get_reminder_handler())
 
     # Catch-all OpenAI chat (LAST so it doesn't hijack diary/reminder inputs)
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
     # Scheduler
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Singapore"))
