@@ -769,7 +769,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
 from commands import song
-from telegram.ext import CommandHandler
+for handler in song.get_handlers():
+    application.add_handler(handler)
+    
 
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
