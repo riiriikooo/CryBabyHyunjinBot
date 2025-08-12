@@ -11,3 +11,4 @@ oauth2client
 spotipy
 requests
 telegram
+aiohttp
