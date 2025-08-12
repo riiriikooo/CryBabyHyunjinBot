@@ -767,6 +767,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=chat_id, text=reply)
 
 from commands.reminder import get_reminder_handler
+from commands.random_media import get_random_media_handler
 
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -781,7 +782,10 @@ async def main():
     # Reminder conversation handler
     reminder_handler = get_reminder_handler()
     application.add_handler(reminder_handler)
-
+    
+    # Random media handler
+    application.add_handler(get_random_media_handler())
+    
     # Catch-all OpenAI chat (LAST so it doesn't hijack diary/reminder inputs)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
