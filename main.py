@@ -769,14 +769,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
 from commands import song
-for handler in song.get_handlers():
-    application.add_handler(handler)
+
     
 from telegram.ext import CommandHandler
 
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    for handler in song.get_handlers():
+        application.add_handler(handler)
+        
     # /start command
     application.add_handler(CommandHandler("start", start))
 
@@ -790,9 +792,6 @@ async def main():
     
     # Random media handler
     application.add_handler(get_random_media_handler())
-
-    #song handler
-    application.add_handler(CommandHandler("song", song.song_command))
     
     # Catch-all OpenAI chat (LAST so it doesn't hijack diary/reminder inputs)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
