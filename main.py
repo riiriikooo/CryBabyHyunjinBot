@@ -772,6 +772,7 @@ from commands import song
 for handler in song.get_handlers():
     application.add_handler(handler)
     
+from telegram.ext import CommandHandler
 
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
