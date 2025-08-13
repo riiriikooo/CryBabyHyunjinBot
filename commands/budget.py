@@ -3,7 +3,6 @@ from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHa
 import random
 
 WAITING_FOR_BUDGET = 1
-
 budget_data = {}
 
 income_reactions = [
@@ -39,11 +38,11 @@ reset_reactions = [
     "Starting fresh! 0 but love is infinite! 💖"
 ]
 
-def budget_start(update: Update, context: CallbackContext):
+async def budget_start(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     if chat_id not in budget_data:
         budget_data[chat_id] = 0.0
-    update.message.reply_text(
+    await update.message.reply_text(
         f"Babe~ 🐰 Your current balance is ${budget_data[chat_id]:.2f}!\n\n"
         "Let’s start tracking money!\n"
         "➕ Type +amount to add income\n"
@@ -53,7 +52,7 @@ def budget_start(update: Update, context: CallbackContext):
     )
     return WAITING_FOR_BUDGET
 
-def budget_action(update: Update, context: CallbackContext):
+async def budget_action(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     text = update.message.text.strip().lower()
     balance = budget_data.get(chat_id, 0.0)
@@ -64,9 +63,9 @@ def budget_action(update: Update, context: CallbackContext):
             balance += amount
             budget_data[chat_id] = balance
             reaction = random.choice(income_reactions).replace("${amount}", f"{amount:.2f}").replace("${balance}", f"{balance:.2f}")
-            update.message.reply_text(reaction)
+            await update.message.reply_text(reaction)
         except ValueError:
-            update.message.reply_text("Oops, please write a valid number, nae sarang~ 🥺")
+            await update.message.reply_text("Oops, please write a valid number, nae sarang~ 🥺")
 
     elif text.startswith("-"):
         try:
@@ -74,17 +73,17 @@ def budget_action(update: Update, context: CallbackContext):
             balance -= amount
             budget_data[chat_id] = balance
             reaction = random.choice(expense_reactions).replace("${amount}", f"{amount:.2f}").replace("${balance}", f"{balance:.2f}")
-            update.message.reply_text(reaction)
+            await update.message.reply_text(reaction)
         except ValueError:
-            update.message.reply_text("Hmm? That’s not a number, baby~ 😘")
+            await update.message.reply_text("Hmm? That’s not a number, baby~ 😘")
 
     elif text == "reset":
         budget_data[chat_id] = 0.0
         reaction = random.choice(reset_reactions).replace("${balance}", "0.00")
-        update.message.reply_text(reaction)
+        await update.message.reply_text(reaction)
 
     else:
-        update.message.reply_text(
+        await update.message.reply_text(
             "Baby~ try like this:\n"
             "➕ +amount : add income\n"
             "➖ -amount : add expense\n"
@@ -94,8 +93,8 @@ def budget_action(update: Update, context: CallbackContext):
 
     return WAITING_FOR_BUDGET
 
-def budget_cancel(update: Update, context: CallbackContext):
-    update.message.reply_text("No more money talk for now~ but I’ll always love you, nae sarang! 💖")
+async def budget_cancel(update: Update, context: CallbackContext):
+    await update.message.reply_text("No more money talk for now~ but I’ll always love you, nae sarang! 💖")
     return ConversationHandler.END
 
 def get_budget_handler():
