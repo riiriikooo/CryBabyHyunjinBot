@@ -1,5 +1,6 @@
 import random
 import requests
+import html
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -71,15 +72,18 @@ async def game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cat_id = category_ids[category]
     token = get_trivia_token()
 
-    # Fetch a question, retry if keyword filtering fails
     while True:
         res = requests.get(
             f"https://opentdb.com/api.php?amount=1&category={cat_id}&type=multiple&token={token}"
         )
         data = res.json()["results"][0]
-        question = data["question"]
-        correct_answer = data["correct_answer"]
-        options = data["incorrect_answers"] + [correct_answer]
+
+        # Decode HTML entities
+        question = html.unescape(data["question"])
+        correct_answer = html.unescape(data["correct_answer"])
+        incorrect_answers = [html.unescape(ans) for ans in data["incorrect_answers"]]
+
+        options = incorrect_answers + [correct_answer]
         random.shuffle(options)
         correct_index = options.index(correct_answer)
 
@@ -100,7 +104,6 @@ async def game(update: Update, context: ContextTypes.DEFAULT_TYPE):
         is_anonymous=False
     )
 
-    # Store for reaction later
     context.user_data["last_correct_index"] = correct_index
 
 async def handle_poll_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
