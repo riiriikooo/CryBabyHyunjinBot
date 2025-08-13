@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
+from telegram.ext import CommandHandler, MessageHandler, filters, ConversationHandler, CallbackContext
 import random
 
 WAITING_FOR_BUDGET = 1
@@ -104,7 +104,7 @@ def get_budget_handler():
         entry_points=[CommandHandler("budget", budget_start)],
         states={
             WAITING_FOR_BUDGET: [
-                MessageHandler(Filters.text & ~Filters.command, budget_action)
+                MessageHandler(filters.text & ~filters.command, budget_action)
             ],
         },
         fallbacks=[CommandHandler("cancel", budget_cancel)],
