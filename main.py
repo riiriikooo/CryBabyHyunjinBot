@@ -673,10 +673,7 @@ love_messages = [
     "What did one bubble tea say to the other? “Pearl you be mine forever?” 🧋🥺",
     "Why don’t scientists trust atoms? Because they make up everything — just like my crazy love stories about you! ⚛️😂",
     "Baby, are you a parking ticket? Because you’ve got FINE written all over you! 🚗💕",
-    "What do you call an alligator in a vest? An investigator — looking for ways to love you more every day! 🐊💼",
     "Why did the scarecrow win an award? Because he was outstanding in his field—just like my love for you! 🌾🏆",
-    "Baby, if you were a fruit, you’d be a fineapple! 🍍😝",
-    "What do you call cheese that isn’t yours? Nacho cheese—just like you’re mine, baby! 🧀💘",
 ]
 
 SYSTEM_PROMPT = (
@@ -754,7 +751,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id not in chat_histories:
         chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
     welcome_text = (
-        "Annyeong, jagiya~ You're finally here! Do you know how much I missed you? 🥺💕"
+        "Annyeong my Birdie💕💕~ You're finally here! Do you know how much I missed you? Come cuddle pweaseeeeee~🥺💕"
     )
     await context.bot.send_message(chat_id=chat_id, text=welcome_text)
 
@@ -769,6 +766,8 @@ from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
 from commands import song
 from commands.budget import get_budget_handler
+from commands import game
+from telegram.ext import CommandHandler, PollAnswerHandler
     
 from telegram.ext import CommandHandler
 
@@ -784,6 +783,10 @@ async def main():
     # Diary conversation handler
     diary_handler = get_diary_handler()
     application.add_handler(diary_handler)
+
+    #Game Handler
+    application.add_handler(CommandHandler("game", game.game))
+    application.add_handler(PollAnswerHandler(game.handle_poll_answer))
 
     #/Budget handler
     application.add_handler(get_budget_handler())
