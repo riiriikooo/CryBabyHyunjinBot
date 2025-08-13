@@ -4,7 +4,6 @@ import random
 
 WAITING_FOR_BUDGET = 1
 
-# In-memory budget data: resets on bot restart
 budget_data = {}
 
 income_reactions = [
@@ -104,7 +103,7 @@ def get_budget_handler():
         entry_points=[CommandHandler("budget", budget_start)],
         states={
             WAITING_FOR_BUDGET: [
-                MessageHandler(filters.text & ~filters.command, budget_action)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, budget_action)
             ],
         },
         fallbacks=[CommandHandler("cancel", budget_cancel)],
