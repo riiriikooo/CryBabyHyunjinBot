@@ -768,7 +768,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
 from commands import song
-
+from commands.budget import get_budget_handler
     
 from telegram.ext import CommandHandler
 
@@ -784,6 +784,9 @@ async def main():
     # Diary conversation handler
     diary_handler = get_diary_handler()
     application.add_handler(diary_handler)
+
+    #/Budget handler
+    application.add_handler(get_budget_handler())
 
     # Reminder conversation handler
     reminder_handler = get_reminder_handler()
