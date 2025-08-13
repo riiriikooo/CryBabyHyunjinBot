@@ -156,6 +156,7 @@ async def budget_action(update: Update, context: CallbackContext):
             "➕ +amount : add income\n"
             "➖ -amount : add expense\n"
             "🔄 reset : reset balance\n"
+            "type cancel to stop tracking, okay? 💖\n"
             "Try again, jagiya~"
         )
 
