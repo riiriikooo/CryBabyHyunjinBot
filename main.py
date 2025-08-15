@@ -26,6 +26,8 @@ from commands.reminder import get_reminder_handler
 
 from commands.crime import get_crime_handler
 
+from commands import love
+
 OpenAI.api_key = OPENAI_API_KEY
 
 logging.basicConfig(
@@ -138,6 +140,8 @@ async def main():
     # Diary conversation handler
     diary_handler = get_diary_handler()
     application.add_handler(diary_handler)
+
+    application.add_handler(CommandHandler("love", love.love_command))
 
     #Game Handler
     application.add_handler(CommandHandler("game", game.game))
