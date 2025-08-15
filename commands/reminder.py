@@ -1,4 +1,6 @@
 # commands/reminder.py
+import json
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ContextTypes, CommandHandler, CallbackQueryHandler,
@@ -8,8 +10,22 @@ from telegram.ext import (
 # States for ConversationHandler
 CHOOSING, TYPING_REMINDER, DELETING = range(3)
 
-# Store reminders in memory (dict: {chat_id: [reminder1, reminder2, ...]})
-reminders = {}
+REMINDERS_FILE = "reminders.json"
+
+# Load reminders from JSON
+if os.path.exists(REMINDERS_FILE):
+    with open(REMINDERS_FILE, "r") as f:
+        reminders = json.load(f)
+        # JSON keys are strings, convert to int for chat_id
+        reminders = {int(k): v for k, v in reminders.items()}
+else:
+    reminders = {}
+
+# Save reminders to JSON
+def save_reminders():
+    with open(REMINDERS_FILE, "w") as f:
+        # Convert chat_id keys to str for JSON
+        json.dump({str(k): v for k, v in reminders.items()}, f, indent=4)
 
 
 # -------------------- Conversation Entry --------------------
@@ -66,6 +82,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if 0 <= idx < len(user_reminders):
             removed = user_reminders.pop(idx)
             reminders[chat_id] = user_reminders
+            save_reminders()
             await query.edit_message_text(f"Deleted reminder: '{removed}' 💔")
         return ConversationHandler.END
 
@@ -75,6 +92,7 @@ async def add_reminder_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     reminder_text = update.message.text
     reminders.setdefault(chat_id, []).append(reminder_text)
+    save_reminders()
     await update.message.reply_text(f"Added your reminder, my love! 💖 '{reminder_text}'")
     return ConversationHandler.END
 
