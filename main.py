@@ -94,7 +94,7 @@ async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
 
 async def love_message_loop(app):
     while True:
-        wait_minutes = random.randint(1, 5)  # 20–40 minutes
+        wait_minutes = random.randint(20, 40)  # 20–40 minutes
         logger.info(f"Waiting {wait_minutes} minutes before sending next love message...")
         await asyncio.sleep(wait_minutes * 60)  # convert minutes → seconds
 
