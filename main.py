@@ -85,7 +85,7 @@ def talk_to_hyunjin(chat_id, user_text):
 
 async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
     for chat_id in list(chat_histories.keys()):
-        message = random.choice(love_messages)
+        message = random.choice(LOVE_MESSAGES)
         try:
             await context.bot.send_message(chat_id=chat_id, text=message)
             logger.info(f"Sent love message to {chat_id}")
@@ -94,9 +94,9 @@ async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
 
 async def love_message_loop(app):
     while True:
-        wait_minutes = random.randint(20, 60)
-        logger.info(f"Waiting {wait_minutes} minutes before sending next love message...")
-        await asyncio.sleep(wait_minutes * 60)
+        wait_seconds = random.randint(20, 40)
+        logger.info(f"Waiting {wait_seconds} seconds before sending next love message...")
+        await asyncio.sleep(wait_seconds * 60)
         class DummyContext:
             def __init__(self, bot):
                 self.bot = bot
