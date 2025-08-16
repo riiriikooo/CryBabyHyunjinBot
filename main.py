@@ -94,14 +94,16 @@ async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
 
 async def love_message_loop(app):
     while True:
-        wait_seconds = random.randint(20, 40)
+        wait_seconds = random.randint(30, 60)  # 30s–1min for testing
         logger.info(f"Waiting {wait_seconds} seconds before sending next love message...")
-        await asyncio.sleep(wait_seconds * 60)
+        await asyncio.sleep(wait_seconds)  # ✅ no *60 here!
+
         class DummyContext:
             def __init__(self, bot):
                 self.bot = bot
         dummy_context = DummyContext(app.bot)
         await send_random_love_note(dummy_context)
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
