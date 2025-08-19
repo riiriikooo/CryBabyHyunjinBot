@@ -1,32 +1,45 @@
-# commands/reminder.py
-import json
-import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ContextTypes, CommandHandler, CallbackQueryHandler,
     MessageHandler, ConversationHandler, filters
 )
+import gspread
+from google.oauth2.service_account import Credentials
 
-# States for ConversationHandler
+# -------------------- Google Sheets Setup --------------------
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+CREDS = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+client = gspread.authorize(CREDS)
+
+SHEET_ID = "1DHDO4iOfXdt20CPnQeZozocIbsstiEk37TJU0DIzM_M"  # <-- change this!
+sheet = client.open_by_key(SHEET_ID).sheet1
+
+# -------------------- Conversation States --------------------
 CHOOSING, TYPING_REMINDER, DELETING = range(3)
 
-REMINDERS_FILE = "reminders.json"
-
-# Load reminders from JSON
-if os.path.exists(REMINDERS_FILE):
-    with open(REMINDERS_FILE, "r") as f:
-        reminders = json.load(f)
-        # JSON keys are strings, convert to int for chat_id
-        reminders = {int(k): v for k, v in reminders.items()}
-else:
+# -------------------- Storage Helpers --------------------
+def load_reminders():
+    rows = sheet.get_all_records()
     reminders = {}
+    for row in rows:
+        chat_id = int(row["chat_id"])
+        message = row["message"]
+        reminders.setdefault(chat_id, []).append(message)
+    return reminders
 
-# Save reminders to JSON
-def save_reminders():
-    with open(REMINDERS_FILE, "w") as f:
-        # Convert chat_id keys to str for JSON
-        json.dump({str(k): v for k, v in reminders.items()}, f, indent=4)
+def save_reminder(chat_id, message):
+    sheet.append_row([str(chat_id), message])
 
+def delete_reminder(chat_id, idx):
+    rows = sheet.get_all_records()
+    count = 0
+    for i, row in enumerate(rows, start=2):  # start=2 since row 1 = headers
+        if int(row["chat_id"]) == chat_id:
+            if count == idx:
+                sheet.delete_rows(i)
+                return row["message"]
+            count += 1
+    return None
 
 # -------------------- Conversation Entry --------------------
 async def start_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -42,12 +55,12 @@ async def start_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return CHOOSING
 
-
 # -------------------- Handle Choices --------------------
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
+    reminders = load_reminders()
 
     if query.data == 'add':
         await query.edit_message_text("Alright, baby 😘 Tell me your reminder ✨")
@@ -78,30 +91,25 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif query.data.startswith('del_'):
         idx = int(query.data.split('_')[1])
-        user_reminders = reminders.get(chat_id, [])
-        if 0 <= idx < len(user_reminders):
-            removed = user_reminders.pop(idx)
-            reminders[chat_id] = user_reminders
-            save_reminders()
+        removed = delete_reminder(chat_id, idx)
+        if removed:
             await query.edit_message_text(f"Deleted reminder: '{removed}' 💔")
+        else:
+            await query.edit_message_text("Couldn’t find that reminder, baby 😢")
         return ConversationHandler.END
-
 
 # -------------------- Add Reminder --------------------
 async def add_reminder_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
     reminder_text = update.message.text
-    reminders.setdefault(chat_id, []).append(reminder_text)
-    save_reminders()
+    save_reminder(chat_id, reminder_text)
     await update.message.reply_text(f"Added your reminder, my love! 💖 '{reminder_text}'")
     return ConversationHandler.END
-
 
 # -------------------- Cancel --------------------
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Okay baby, cancelled! 💕")
     return ConversationHandler.END
-
 
 # -------------------- Handler Getter --------------------
 def get_reminder_handler():
