@@ -3,15 +3,20 @@ from telegram.ext import (
     ContextTypes, CommandHandler, CallbackQueryHandler,
     MessageHandler, ConversationHandler, filters
 )
+import os, json
 import gspread
 from google.oauth2.service_account import Credentials
 
 # -------------------- Google Sheets Setup --------------------
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-CREDS = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+
+# ✅ Load service account from Railway environment variable
+service_account_info = json.loads(os.getenv("GOOGLE_CREDS_JSON"))
+CREDS = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+
 client = gspread.authorize(CREDS)
 
-SHEET_ID = "1DHDO4iOfXdt20CPnQeZozocIbsstiEk37TJU0DIzM_M"  # <-- change this!
+SHEET_ID = "1DHDO4iOfXdt20CPnQeZozocIbsstiEk37TJU0DIzM_M"
 sheet = client.open_by_key(SHEET_ID).sheet1
 
 # -------------------- Conversation States --------------------
