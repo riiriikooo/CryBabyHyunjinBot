@@ -76,7 +76,7 @@ try:
         model="gpt-5-nano",
         messages=chat_histories[chat_id],
         temperature=1.0,
-        max_completion_tokens=120,  # <-- changed from max_tokens
+        max_completion_tokens=120,
     )
     reply = response.choices[0].message.content
     chat_histories[chat_id].append({"role": "assistant", "content": reply})
@@ -84,10 +84,7 @@ try:
 
 except Exception as e:
     logger.error(f"OpenAI API error: {e}")
-    # still append fallback reply so wifey Hyunjin always responds
-    fallback = "Jagiyaaaa I love you~"
-    chat_histories[chat_id].append({"role": "assistant", "content": fallback})
-    return fallback
+    return "Jagiyaaaa I love you~"
 
 async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
     for chat_id in list(chat_histories.keys()):
