@@ -71,18 +71,23 @@ def talk_to_hyunjin(chat_id, user_text):
     chat_histories[chat_id].append({"role": "user", "content": user_text})
     trim_chat_history(chat_id)
 
-    try:  # now inside the function
+    try:
         response = client.chat.completions.create(
             model="gpt-5-nano",
             messages=chat_histories[chat_id],
             temperature=1.0,
             max_completion_tokens=120,
         )
-        reply = response.choices[0].message.content
+
+        # Safely get the reply
+        reply = getattr(response.choices[0].message, "content", None)
+        if not reply:
+            reply = "Jagiyaaaa I love you~"  # fallback if GPT gives nothing
+
         chat_histories[chat_id].append({"role": "assistant", "content": reply})
         return reply
 
-    except Exception as e:  # aligned with try, still inside the function
+    except Exception as e:
         logger.error(f"OpenAI API error: {e}")
         return "Jagiyaaaa I love you~"
 
