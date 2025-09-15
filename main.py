@@ -75,16 +75,16 @@ try:
     response = client.chat.completions.create(
         model="gpt-5-nano",   # switched to GPT-5 nano
         messages=chat_histories[chat_id],
-        temperature=1.0,      # a bit higher for more messy/chaotic clinginess
-        max_completion_tokens=120,       # shorter bursts feel more frantic & desperate
+        temperature=1.0,
+        max_completion_tokens=120,
     )
     reply = response.choices[0].message.content
     chat_histories[chat_id].append({"role": "assistant", "content": reply})
     return reply
 
-    except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
-        return "Jagiyaaaa I love you~"
+except Exception as e:  # ✅ aligned with try
+    logger.error(f"OpenAI API error: {e}")
+    return "Jagiyaaaa I love you~"
 
 async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
     for chat_id in list(chat_histories.keys()):
