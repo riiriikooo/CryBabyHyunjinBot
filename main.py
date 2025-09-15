@@ -73,23 +73,20 @@ def talk_to_hyunjin(chat_id, user_text):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-5-nano",
+            model="gpt-4.1-nano",  # Switch to gpt-4.1-nano
             messages=chat_histories[chat_id],
             temperature=1.0,
-            max_completion_tokens=120,
+            max_tokens=150,
         )
 
-        # Correct way to access GPT-5-nano response
-        reply = getattr(response.choices[0], "content", None)
-        if not reply:
-            reply = "Jagiyaaaa I love you~"  # fallback only if truly empty
-
+        reply = response.choices[0].message.content if response.choices else "Jagiyaaaa I love you~"
         chat_histories[chat_id].append({"role": "assistant", "content": reply})
         return reply
 
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
         return "Jagiyaaaa I love you~"
+
 
 async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
     for chat_id in list(chat_histories.keys()):
