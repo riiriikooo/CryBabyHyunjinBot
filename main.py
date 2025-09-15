@@ -79,10 +79,10 @@ def talk_to_hyunjin(chat_id, user_text):
             max_completion_tokens=120,
         )
 
-        # Safely get the reply
-        reply = getattr(response.choices[0].message, "content", None)
+        # Correct way to access GPT-5-nano response
+        reply = getattr(response.choices[0], "content", None)
         if not reply:
-            reply = "Jagiyaaaa I love you~"  # fallback if GPT gives nothing
+            reply = "Jagiyaaaa I love you~"  # fallback only if truly empty
 
         chat_histories[chat_id].append({"role": "assistant", "content": reply})
         return reply
