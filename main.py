@@ -71,16 +71,17 @@ def talk_to_hyunjin(chat_id, user_text):
     chat_histories[chat_id].append({"role": "user", "content": user_text})
     trim_chat_history(chat_id)
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=chat_histories[chat_id],
-            temperature=0.9,
-            max_tokens=300,
-        )
-        reply = response.choices[0].message.content
-        chat_histories[chat_id].append({"role": "assistant", "content": reply})
-        return reply
+try:
+    response = client.chat.completions.create(
+        model="gpt-5-nano",   # switched to GPT-5 nano
+        messages=chat_histories[chat_id],
+        temperature=1.0,      # a bit higher for more messy/chaotic clinginess
+        max_tokens=120,       # shorter bursts feel more frantic & desperate
+    )
+    reply = response.choices[0].message.content
+    chat_histories[chat_id].append({"role": "assistant", "content": reply})
+    return reply
+
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
         return "Jagiyaaaa I love you~"
@@ -96,7 +97,7 @@ async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
 
 async def love_message_loop(app):
     while True:
-        wait_minutes = random.randint(20, 40)  # 20–40 minutes
+        wait_minutes = random.randint(20, 60)  # 20–40 minutes
         logger.info(f"Waiting {wait_minutes} minutes before sending next love message...")
         await asyncio.sleep(wait_minutes * 60)  # convert minutes → seconds
 
