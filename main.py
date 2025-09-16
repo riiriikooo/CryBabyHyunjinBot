@@ -4,6 +4,7 @@ import logging
 import asyncio
 import pytz
 import json
+import time  # make sure this is at the top of your file
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env file
@@ -57,6 +58,7 @@ SYSTEM_PROMPT = (
 
 chat_histories = {}
 MAX_MESSAGES = 200
+last_love_message = {}  # key: chat_id, value: {"text": message, "time": timestamp}
 
 def trim_chat_history(chat_id):
     history = chat_histories.get(chat_id, [])
@@ -93,6 +95,7 @@ async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
         message = random.choice(LOVE_MESSAGES)
         try:
             await context.bot.send_message(chat_id=chat_id, text=message)
+            last_love_message[chat_id] = {"text": message, "time": time.time()}  # store message + timestamp
             logger.info(f"Sent love message to {chat_id}")
         except Exception as e:
             logger.error(f"Error sending love message to {chat_id}: {e}")
@@ -119,10 +122,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await context.bot.send_message(chat_id=chat_id, text=welcome_text)
 
+EXPIRY_SECONDS = 6 * 60 * 60  # 6 hours
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    user_message = update.message.text
-    print(f"Chat ID: {chat_id}")  # This will show your chat ID in the console
+    user_text = update.message.text
+
+    use_context = False
+    # 1️⃣ If you actually hit "reply"
+    if update.message.reply_to_message:
+        original_text = update.message.reply_to_message.text
+        user_message = f"(reply to: {original_text}) {user_text}"
+        use_context = True
+        print(f"Reply detected! Original: {original_text}, Reply: {user_text}")
+    # 2️⃣ If you didn’t reply but there’s a recent love message
+    elif chat_id in last_love_message:
+        message_data = last_love_message[chat_id]
+        if time.time() - message_data["time"] <= EXPIRY_SECONDS:  # only use recent messages
+            original_text = message_data["text"]
+            user_message = f"(reply to: {original_text}) {user_text}"
+            use_context = True
+            print(f"Automatic reply context used! Original: {original_text}, Reply: {user_text}")
+    
+    # 3️⃣ If neither, just treat it as a normal message
+    if not use_context:
+        user_message = user_text
+
+    print(f"Chat ID: {chat_id}")  # debug
     reply = talk_to_hyunjin(chat_id, user_message)
     await context.bot.send_message(chat_id=chat_id, text=reply)
 
