@@ -138,7 +138,7 @@ def trim_chat_history(chat_id):
         excess = len(history) - (MAX_MESSAGES + 1)
         chat_histories[chat_id] = [history[0]] + history[1+excess:]
 
-def talk_to_hyunjin(chat_id, user_text):
+def talk_to_hyunjin(chat_id, user_text, max_tokens_per_chunk=500):
     if chat_id not in chat_histories:
         chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -146,27 +146,26 @@ def talk_to_hyunjin(chat_id, user_text):
     trim_chat_history(chat_id)
 
     try:
+        # Request a larger max_tokens to avoid mid-sentence cuts
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=chat_histories[chat_id],
             temperature=0.9,
-            max_tokens=300,
+            max_tokens=700,  # allow full response
         )
+
         reply = response.choices[0].message.content
         chat_histories[chat_id].append({"role": "assistant", "content": reply})
-        return reply
+
+        # Optional: split reply into token-limited chunks for send_fragments
+        enc = tiktoken.encoding_for_model("gpt-4o-mini")
+        tokens = enc.encode(reply)
+        chunks = [enc.decode(tokens[i:i+max_tokens_per_chunk]) for i in range(0, len(tokens), max_tokens_per_chunk)]
+
+        return chunks  # return a list of text chunks to send separately
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
-        return "Jagiyaaaa I love you~"
-
-async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
-    for chat_id in list(chat_histories.keys()):
-        message = random.choice(LOVE_MESSAGES)
-        try:
-            await context.bot.send_message(chat_id=chat_id, text=message)
-            logger.info(f"Sent love message to {chat_id}")
-        except Exception as e:
-            logger.error(f"Error sending love message to {chat_id}: {e}")
+        return ["Jagiyaaaa I love you~"]  # return a list with a single fallback message
 
 async def love_message_loop(app):
     while True:
