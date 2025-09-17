@@ -5,6 +5,90 @@ import asyncio
 import pytz
 import json
 from dotenv import load_dotenv
+import re   # <-- add this if not already imported
+
+async def send_fragments(context, chat_id, text):
+    """
+    Send a generated reply in 1–6 fragments with random imperfections:
+    - Fragment splitting by sentence, punctuation, ellipses, or random cut
+    - Typing delays that feel human
+    - Occasional stutters, fillers, typos, or self-corrections
+    """
+
+    # ----------- CONFIG ------------
+    reply_length_probs = [60, 20, 10, 6, 3, 1]   # weights for 1–6 fragments
+    stutter_prob = 0.15
+    filler_prob = 0.30
+    typo_prob = 0.06
+    correction_prob = 0.05
+    fillers = ["you know", "like", "right?", "honestly"]
+    stutter_syllables = ["I", "w", "y", "b"]  # for 'I-I...', 'w-wait...'
+    # --------------------------------
+
+    # Decide number of fragments
+    num_fragments = random.choices([1,2,3,4,5,6], weights=reply_length_probs, k=1)[0]
+
+    # Pick a split strategy
+    strategies = ["sentence", "punctuation", "ellipsis", "random"]
+    chosen_strategy = random.choice(strategies)
+
+    # Split into candidate parts
+    if chosen_strategy == "sentence":
+        parts = re.split(r'(?<=[.!?])\s+', text)
+    elif chosen_strategy == "punctuation":
+        parts = re.split(r'([,!?])', text)
+        parts = ["".join(parts[i:i+2]).strip() for i in range(0, len(parts), 2)]
+    elif chosen_strategy == "ellipsis":
+        parts = text.replace("...", "|...|").split("|")
+    else:  # random cut
+        cut_points = sorted(random.sample(range(1, len(text)), k=min(num_fragments-1, len(text)-1)))
+        parts, last = [], 0
+        for cp in cut_points:
+            parts.append(text[last:cp])
+            last = cp
+        parts.append(text[last:])
+
+    parts = [p.strip() for p in parts if p.strip()]
+
+    # Merge if too many
+    while len(parts) > num_fragments:
+        i = random.randint(0, len(parts)-2)
+        parts[i] = parts[i] + " " + parts[i+1]
+        del parts[i+1]
+
+    # Inject imperfections
+    def add_imperfections(frag):
+        # Stutter
+        if random.random() < stutter_prob:
+            syl = random.choice(stutter_syllables)
+            frag = f"{syl}-{syl}... {frag}"
+
+        # Filler
+        if random.random() < filler_prob:
+            frag += " " + random.choice(fillers)
+
+        # Typo + correction
+        if random.random() < typo_prob and len(frag.split()) > 1:
+            words = frag.split()
+            idx = random.randint(0, len(words)-1)
+            wrong = words[idx][:-1] if len(words[idx]) > 3 else words[idx] + "x"
+            frag = " ".join(words[:idx] + [wrong] + words[idx+1:])
+            if random.random() < correction_prob:
+                frag += f"—sorry, I meant {words[idx]}"
+
+        return frag
+
+    # Send fragments with delays
+    for frag in parts:
+        frag = add_imperfections(frag)
+        if not frag:
+            continue
+        await context.bot.send_message(chat_id=chat_id, text=frag)
+
+        # Human-like delay
+        base_delay = max(0.5, len(frag) / 18.0)  # 18 chars/sec typing
+        jitter = random.uniform(-0.3, 1.5)
+        await asyncio.sleep(base_delay + jitter)
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -124,8 +208,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_message = update.message.text
     print(f"Chat ID: {chat_id}")  # This will show your chat ID in the console
+
     reply = talk_to_hyunjin(chat_id, user_message)
-    await context.bot.send_message(chat_id=chat_id, text=reply)
+
+    # Send reply in human-like fragments
+    await send_fragments(context, chat_id, reply)
 
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
