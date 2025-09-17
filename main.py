@@ -11,8 +11,9 @@ import re   # <-- add this if not already imported
 async def send_fragments(context, chat_id, text, max_fragments=6):
     """
     Send a clingy, messy text in 1–6 fragments, with:
-    - Random splits (sentence, punctuation, ellipses, random cuts)
+    - Random splits at spaces (never mid-word)
     - Optional stutters, fillers, minor typos
+    - Ellipses for nervous pauses
     - Human-like delays
     """
     # --- CONFIG ---
@@ -20,37 +21,36 @@ async def send_fragments(context, chat_id, text, max_fragments=6):
     filler_prob = 0.3
     typo_prob = 0.05
     correction_prob = 0.05
-    fillers = ["you know", "like", "right?", "honestly", "uh"]
-    stutter_syllables = ["I", "w", "b"]
-    
+    fillers = ["you know", "like", "right?", "honestly", "uh", "w-wait"]
+    stutter_syllables = ["I", "w", "y", "b"]
+
     # --- Decide number of fragments ---
     num_fragments = random.randint(1, max_fragments)
 
     # --- Split text into candidate fragments ---
-    strategy = random.choice(["sentence", "punctuation", "ellipsis", "random"])
-    if strategy == "sentence":
-        parts = re.split(r'(?<=[.!?])\s+', text)
-    elif strategy == "punctuation":
-        parts = re.split(r'([,!?])', text)
-        parts = ["".join(parts[i:i+2]).strip() for i in range(0, len(parts), 2)]
-    elif strategy == "ellipsis":
-        parts = text.replace("...", "|...|").split("|")
-    else:  # random cut
-        cut_points = sorted(random.sample(range(1, len(text)), k=min(num_fragments-1, len(text)-1)))
-        parts, last = [], 0
-        for cp in cut_points:
-            parts.append(text[last:cp])
-            last = cp
-        parts.append(text[last:])
+    words = text.split()
+    if len(words) <= num_fragments:
+        parts = words
+    else:
+        # Choose split points at word boundaries
+        split_indices = sorted(random.sample(range(1, len(words)), k=num_fragments-1))
+        parts = []
+        last = 0
+        for idx in split_indices:
+            parts.append(" ".join(words[last:idx]))
+            last = idx
+        parts.append(" ".join(words[last:]))
 
-    # --- Merge or trim to match desired number of fragments ---
-    parts = [p.strip() for p in parts if p.strip()]
-    while len(parts) > num_fragments:
-        i = random.randint(0, len(parts)-2)
-        parts[i] = parts[i] + " " + parts[i+1]
-        del parts[i+1]
+    # --- Merge very short fragments ---
+    cleaned_parts = []
+    for frag in parts:
+        if len(frag.split()) < 2 and cleaned_parts:
+            cleaned_parts[-1] += " " + frag
+        else:
+            cleaned_parts.append(frag)
+    parts = cleaned_parts
 
-    # --- Function to add imperfections ---
+    # --- Function to add messy imperfections ---
     def mess_up(frag):
         # Stutter at start
         if frag and random.random() < stutter_prob:
@@ -72,7 +72,7 @@ async def send_fragments(context, chat_id, text, max_fragments=6):
                 else:
                     frag = frag + ", " + filler
 
-        # Typo + correction
+        # Typo + optional correction
         if random.random() < typo_prob and len(frag.split()) > 1:
             words = frag.split()
             idx = random.randint(0, len(words)-1)
@@ -81,6 +81,8 @@ async def send_fragments(context, chat_id, text, max_fragments=6):
             if random.random() < correction_prob:
                 frag += f"—sorry, I meant {words[idx]}"
 
+        # Clean up multiple dots
+        frag = re.sub(r'\.{2,}', '...', frag)
         return frag.strip()
 
     # --- Send fragments with human-like delays ---
@@ -91,7 +93,7 @@ async def send_fragments(context, chat_id, text, max_fragments=6):
         await context.bot.send_message(chat_id=chat_id, text=frag)
 
         # delay based on length + jitter
-        base_delay = max(0.5, len(frag)/18.0)  # ~18 chars/sec typing
+        base_delay = max(0.5, len(frag)/18.0)
         jitter = random.uniform(0, 1.5)
         await asyncio.sleep(base_delay + jitter)
 
