@@ -12,3 +12,4 @@ spotipy
 requests
 telegram
 aiohttp
+tiktoken
