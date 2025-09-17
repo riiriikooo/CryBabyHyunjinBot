@@ -21,7 +21,7 @@ async def send_fragments(context, chat_id, text, max_fragments=6):
     typo_prob = 0.05
     correction_prob = 0.05
     fillers = ["you know", "like", "right?", "honestly", "uh"]
-    stutter_syllables = ["I", "w", "y", "b"]
+    stutter_syllables = ["I", "w", "b"]
     
     # --- Decide number of fragments ---
     num_fragments = random.randint(1, max_fragments)
@@ -94,7 +94,7 @@ async def send_fragments(context, chat_id, text, max_fragments=6):
         base_delay = max(0.5, len(frag)/18.0)  # ~18 chars/sec typing
         jitter = random.uniform(0, 1.5)
         await asyncio.sleep(base_delay + jitter)
-        
+
 load_dotenv()  # Load environment variables from .env file
 
 from openai import OpenAI
