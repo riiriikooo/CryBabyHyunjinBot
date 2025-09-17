@@ -8,94 +8,48 @@ from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
 
-async def send_fragments(context, chat_id, text, max_fragments=6):
+async def send_fragments(context, chat_id, text, max_messages=5):
     """
-    Send a clingy, messy text in 1–6 fragments, with:
-    - Random splits at spaces (never mid-word)
-    - Optional stutters, fillers, minor typos
-    - Ellipses for nervous pauses
-    - Human-like delays
+    Send human-like clingy texts in 1–5 messages:
+    - Each message contains complete sentences
+    - Randomly decide how many messages per reply
+    - Optional fillers
+    - Slight human-like delay
     """
     # --- CONFIG ---
-    stutter_prob = 0.4
     filler_prob = 0.3
-    typo_prob = 0.05
-    correction_prob = 0.05
-    fillers = ["you know", "like", "right?", "honestly", "uh", "w-wait"]
-    stutter_syllables = ["I", "w", "y", "b"]
+    fillers = ["you know", "like", "right?", "honestly", "uh"]
 
-    # --- Decide number of fragments ---
-    num_fragments = random.randint(1, max_fragments)
+    # --- Split text into complete sentences ---
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    if not sentences:
+        return
 
-    # --- Split text into candidate fragments ---
-    words = text.split()
-    if len(words) <= num_fragments:
-        parts = words
-    else:
-        # Choose split points at word boundaries
-        split_indices = sorted(random.sample(range(1, len(words)), k=num_fragments-1))
-        parts = []
-        last = 0
-        for idx in split_indices:
-            parts.append(" ".join(words[last:idx]))
-            last = idx
-        parts.append(" ".join(words[last:]))
+    # --- Decide number of messages ---
+    num_messages = random.randint(1, min(max_messages, len(sentences)))
 
-    # --- Merge very short fragments ---
-    cleaned_parts = []
-    for frag in parts:
-        if len(frag.split()) < 2 and cleaned_parts:
-            cleaned_parts[-1] += " " + frag
-        else:
-            cleaned_parts.append(frag)
-    parts = cleaned_parts
+    # --- Split sentences into message groups ---
+    messages = []
+    remaining_sentences = sentences.copy()
+    for i in range(num_messages, 0, -1):
+        # Decide how many sentences go into this message
+        take = random.randint(1, max(1, len(remaining_sentences) - (i-1)))
+        msg_sentences = remaining_sentences[:take]
+        remaining_sentences = remaining_sentences[take:]
+        message = " ".join(msg_sentences)
 
-    # --- Function to add messy imperfections ---
-    def mess_up(frag):
-        # Stutter at start
-        if frag and random.random() < stutter_prob:
-            syl = random.choice(stutter_syllables)
-            frag = f"{syl}-{syl}... {frag}"
-
-        # Filler at random place
+        # Optionally add a filler
         if random.random() < filler_prob:
-            words = frag.split()
-            if len(words) > 2:
-                pos = random.choice(["start", "middle", "end"])
-                filler = random.choice(fillers)
-                if pos == "start":
-                    frag = f"{filler}, " + frag
-                elif pos == "middle":
-                    mid = len(words) // 2
-                    words.insert(mid, filler)
-                    frag = " ".join(words)
-                else:
-                    frag = frag + ", " + filler
+            message += f", {random.choice(fillers)}"
 
-        # Typo + optional correction
-        if random.random() < typo_prob and len(frag.split()) > 1:
-            words = frag.split()
-            idx = random.randint(0, len(words)-1)
-            wrong = words[idx][:-1] if len(words[idx]) > 3 else words[idx] + "x"
-            frag = " ".join(words[:idx] + [wrong] + words[idx+1:])
-            if random.random() < correction_prob:
-                frag += f"—sorry, I meant {words[idx]}"
+        messages.append(message)
 
-        # Clean up multiple dots
-        frag = re.sub(r'\.{2,}', '...', frag)
-        return frag.strip()
-
-    # --- Send fragments with human-like delays ---
-    for frag in parts:
-        frag = mess_up(frag)
-        if not frag:
-            continue
+    # --- Send messages with slight human-like delay ---
+    for frag in messages:
         await context.bot.send_message(chat_id=chat_id, text=frag)
-
-        # delay based on length + jitter
-        base_delay = max(0.5, len(frag)/18.0)
-        jitter = random.uniform(0, 1.5)
-        await asyncio.sleep(base_delay + jitter)
+        delay = max(0.5, len(frag)/18.0) + random.uniform(0, 1.0)
+        await asyncio.sleep(delay)
 
 load_dotenv()  # Load environment variables from .env file
 
