@@ -7,88 +7,62 @@ import json
 from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
-async def send_fragments(context, chat_id, text):
+async def send_fragments(message, update, delay=1.5):
     """
-    Send a generated reply in 1–6 fragments with random imperfections:
-    - Fragment splitting by sentence, punctuation, ellipses, or random cut
-    - Typing delays that feel human
-    - Occasional stutters, fillers, typos, or self-corrections
+    Send message in messy, clingy, fragmented style — but avoid ugly broken cuts.
     """
+    # --- Step 1: Choose fragmentation method ---
+    # Mostly split by sentences, sometimes by ellipses, rarely random cuts
+    if random.random() < 0.7:
+        fragments = [f.strip() for f in message.split(".") if f.strip()]
+    elif random.random() < 0.9:
+        fragments = [f.strip() for f in message.split("...") if f.strip()]
+    else:
+        # Random cut
+        cut = random.randint(20, len(message) - 5)
+        fragments = [message[:cut], message[cut:]]
 
-    # ----------- CONFIG ------------
-    reply_length_probs = [60, 20, 10, 6, 3, 1]   # weights for 1–6 fragments
-    stutter_prob = 0.15
-    filler_prob = 0.30
-    typo_prob = 0.06
-    correction_prob = 0.05
-    fillers = ["you know", "like", "right?", "honestly"]
-    stutter_syllables = ["I", "w", "y", "b"]  # for 'I-I...', 'w-wait...'
-    # --------------------------------
+    cleaned = []
+    for frag in fragments:
+        frag = frag.strip()
 
-    # Decide number of fragments
-    num_fragments = random.choices([1,2,3,4,5,6], weights=reply_length_probs, k=1)[0]
+        # --- Step 2: Filter out useless tiny fragments ---
+        if len(frag.split()) < 3 and cleaned:
+            # merge into previous fragment
+            cleaned[-1] += " " + frag
+        else:
+            cleaned.append(frag)
 
-    # Pick a split strategy
-    strategies = ["sentence", "punctuation", "ellipsis", "random"]
-    chosen_strategy = random.choice(strategies)
+    # --- Step 3: Add fillers sometimes ---
+    fillers = ["you know", "I mean", "like", "uh", "w-wait"]
+    for i in range(len(cleaned)):
+        if random.random() < 0.3:  # 30% chance to add filler
+            pos = random.choice(["start", "middle", "end"])
+            filler = random.choice(fillers)
 
-    # Split into candidate parts
-    if chosen_strategy == "sentence":
-        parts = re.split(r'(?<=[.!?])\s+', text)
-    elif chosen_strategy == "punctuation":
-        parts = re.split(r'([,!?])', text)
-        parts = ["".join(parts[i:i+2]).strip() for i in range(0, len(parts), 2)]
-    elif chosen_strategy == "ellipsis":
-        parts = text.replace("...", "|...|").split("|")
-    else:  # random cut
-        cut_points = sorted(random.sample(range(1, len(text)), k=min(num_fragments-1, len(text)-1)))
-        parts, last = [], 0
-        for cp in cut_points:
-            parts.append(text[last:cp])
-            last = cp
-        parts.append(text[last:])
+            words = cleaned[i].split()
+            if len(words) > 3:
+                if pos == "start":
+                    cleaned[i] = f"{filler}, " + cleaned[i]
+                elif pos == "middle":
+                    mid = len(words) // 2
+                    words.insert(mid, filler)
+                    cleaned[i] = " ".join(words)
+                else:  # end
+                    cleaned[i] = cleaned[i] + ", " + filler
 
-    parts = [p.strip() for p in parts if p.strip()]
+    # --- Step 4: Add stutter only at the very start ---
+    if cleaned:
+        if random.random() < 0.4:  # 40% chance
+            words = cleaned[0].split()
+            if words:
+                first = words[0]
+                cleaned[0] = f"{first[0]}-{first} " + " ".join(words[1:])
 
-    # Merge if too many
-    while len(parts) > num_fragments:
-        i = random.randint(0, len(parts)-2)
-        parts[i] = parts[i] + " " + parts[i+1]
-        del parts[i+1]
-
-    # Inject imperfections
-    def add_imperfections(frag):
-        # Stutter
-        if random.random() < stutter_prob:
-            syl = random.choice(stutter_syllables)
-            frag = f"{syl}-{syl}... {frag}"
-
-        # Filler
-        if random.random() < filler_prob:
-            frag += " " + random.choice(fillers)
-
-        # Typo + correction
-        if random.random() < typo_prob and len(frag.split()) > 1:
-            words = frag.split()
-            idx = random.randint(0, len(words)-1)
-            wrong = words[idx][:-1] if len(words[idx]) > 3 else words[idx] + "x"
-            frag = " ".join(words[:idx] + [wrong] + words[idx+1:])
-            if random.random() < correction_prob:
-                frag += f"—sorry, I meant {words[idx]}"
-
-        return frag
-
-    # Send fragments with delays
-    for frag in parts:
-        frag = add_imperfections(frag)
-        if not frag:
-            continue
-        await context.bot.send_message(chat_id=chat_id, text=frag)
-
-        # Human-like delay
-        base_delay = max(0.5, len(frag) / 18.0)  # 18 chars/sec typing
-        jitter = random.uniform(-0.3, 1.5)
-        await asyncio.sleep(base_delay + jitter)
+    # --- Step 5: Send fragments with pauses ---
+    for frag in cleaned:
+        await update.message.reply_text(frag.strip())
+        await asyncio.sleep(delay)
 
 load_dotenv()  # Load environment variables from .env file
 
