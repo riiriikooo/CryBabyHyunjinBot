@@ -4,69 +4,77 @@ import logging
 import asyncio
 import pytz
 import json
+import tiktoken
 from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
 
-async def send_fragments(context, chat_id, text, max_messages=5):
+async def send_fragments(context, chat_id, text, max_messages=5, max_tokens_per_chunk=300):
     """
-    Send human-like clingy texts in 1–5 messages:
-    - Each message contains complete sentences
-    - Randomly decide how many messages per reply
+    Send human-like clingy texts:
+    - Split text into chunks of ~max_tokens_per_chunk
+    - Each chunk is further split into 1–5 messages
     - Optional fillers
-    - Ask Birdie questions
+    - 40% chance to ask a random AI-generated question
     - Slight human-like delay
     """
-    # --- CONFIG ---
     filler_prob = 0.3
-    question_prob = 0.4  # 40% chance
+    question_prob = 0.4
     fillers = ["you know", "like", "right?", "honestly", "uh"]
 
+    # --- Split text into token chunks ---
+    enc = tiktoken.encoding_for_model("gpt-4o-mini")
+    tokens = enc.encode(text)
+    chunks = [enc.decode(tokens[i:i+max_tokens_per_chunk]) for i in range(0, len(tokens), max_tokens_per_chunk)]
 
-    # --- Split text into complete sentences ---
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    sentences = [s.strip() for s in sentences if s.strip()]
-    if not sentences:
-        return
+    # --- Process each chunk ---
+    for chunk in chunks:
+        # Split chunk into sentences
+        sentences = re.split(r'(?<=[.!?])\s+', chunk)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if not sentences:
+            continue
 
-    # --- Decide number of messages ---
-    num_messages = random.randint(1, min(max_messages, len(sentences)))
+        # Decide number of messages
+        num_messages = random.randint(1, min(max_messages, len(sentences)))
+        remaining_sentences = sentences.copy()
+        messages = []
 
-    # --- Split sentences into message groups ---
-    messages = []
-    remaining_sentences = sentences.copy()
-    for i in range(num_messages, 0, -1):
-        # Decide how many sentences go into this message
-        take = random.randint(1, max(1, len(remaining_sentences) - (i-1)))
-        msg_sentences = remaining_sentences[:take]
-        remaining_sentences = remaining_sentences[take:]
-        message = " ".join(msg_sentences)
+        for i in range(num_messages, 0, -1):
+            take = random.randint(1, max(1, len(remaining_sentences) - (i-1)))
+            msg_sentences = remaining_sentences[:take]
+            remaining_sentences = remaining_sentences[take:]
+            message = " ".join(msg_sentences)
 
-        # Optional filler
-        if random.random() < filler_prob:
-            message += f", {random.choice(fillers)}"
+            # Optional filler
+            if random.random() < filler_prob:
+                message += f", {random.choice(fillers)}"
 
-        # Optional random AI-generated question
-        if random.random() < question_prob:
-            prompt = "Ask a short, random, curious, obsessive question to Birdie about her life, thoughts, or feelings."
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are SeoJun, a clingy, obsessive lover."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=20,
-            )
-            question = response.choices[0].message.content.strip()
-            message += f" {question}"
+            # Optional random AI-generated question
+            if random.random() < question_prob:
+                prompt = "Ask a short, random, curious, obsessive question to Birdie about her life, thoughts, or feelings."
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": "You are SeoJun, a clingy, obsessive lover."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=20,
+                    )
+                    question = response.choices[0].message.content.strip()
+                    message += f" {question}"
+                except Exception as e:
+                    # fallback if API fails
+                    message += " Jagiya, tell me something secret about your day~"
 
-        messages.append(message)
+            messages.append(message)
 
-    # Send messages with slight delay
-    for frag in messages:
-        await context.bot.send_message(chat_id=chat_id, text=frag)
-        delay = max(0.5, len(frag)/18.0) + random.uniform(0, 1.0)
-        await asyncio.sleep(delay)
+        # Send each fragment with slight delay
+        for frag in messages:
+            await context.bot.send_message(chat_id=chat_id, text=frag)
+            delay = max(0.5, len(frag)/18.0) + random.uniform(0, 1.0)
+            await asyncio.sleep(delay)
 
 load_dotenv()  # Load environment variables from .env file
 
