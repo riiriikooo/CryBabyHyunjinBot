@@ -1,45 +1,49 @@
-import os
-import random
-import logging
-import asyncio
-import pytz
-import json
-from dotenv import load_dotenv
-import re   # <-- add this if not already imported
+sync def send_fragments(
+    message: str,
+    update: Update = None,
+    context: ContextTypes.DEFAULT_TYPE = None,
+    chat_id: int = None,
+    delay: float = 1.5
+):
+    """
+    Sends a long message in messy, clingy, fragmented style safely.
+    
+    Args:
+        message (str): The message to send.
+        update (Update, optional): Telegram Update object for reply_text. Defaults to None.
+        context (ContextTypes.DEFAULT_TYPE, optional): Telegram context to send messages via bot. Defaults to None.
+        chat_id (int, optional): Telegram chat_id if update is None. Required if update is None.
+        delay (float, optional): Delay between fragments in seconds. Defaults to 1.5.
+    """
 
-async def send_fragments(message, update, delay=1.5):
-    """
-    Send message in messy, clingy, fragmented style — but avoid ugly broken cuts.
-    """
-    # --- Step 1: Choose fragmentation method ---
-    # Mostly split by sentences, sometimes by ellipses, rarely random cuts
-    if random.random() < 0.7:
+    if not isinstance(message, str):
+        message = str(message)
+
+    # --- Step 1: Fragment the message ---
+    rand_val = random.random()
+    if rand_val < 0.7:
         fragments = [f.strip() for f in message.split(".") if f.strip()]
-    elif random.random() < 0.9:
+    elif rand_val < 0.9:
         fragments = [f.strip() for f in message.split("...") if f.strip()]
     else:
-        # Random cut
-        cut = random.randint(20, len(message) - 5)
+        cut = random.randint(20, max(25, len(message) - 5))
         fragments = [message[:cut], message[cut:]]
 
+    # --- Step 2: Merge tiny fragments ---
     cleaned = []
     for frag in fragments:
         frag = frag.strip()
-
-        # --- Step 2: Filter out useless tiny fragments ---
         if len(frag.split()) < 3 and cleaned:
-            # merge into previous fragment
             cleaned[-1] += " " + frag
         else:
             cleaned.append(frag)
 
-    # --- Step 3: Add fillers sometimes ---
+    # --- Step 3: Add random fillers ---
     fillers = ["you know", "I mean", "like", "uh", "w-wait"]
     for i in range(len(cleaned)):
-        if random.random() < 0.3:  # 30% chance to add filler
+        if random.random() < 0.3:
             pos = random.choice(["start", "middle", "end"])
             filler = random.choice(fillers)
-
             words = cleaned[i].split()
             if len(words) > 3:
                 if pos == "start":
@@ -48,20 +52,28 @@ async def send_fragments(message, update, delay=1.5):
                     mid = len(words) // 2
                     words.insert(mid, filler)
                     cleaned[i] = " ".join(words)
-                else:  # end
+                else:
                     cleaned[i] = cleaned[i] + ", " + filler
 
-    # --- Step 4: Add stutter only at the very start ---
-    if cleaned:
-        if random.random() < 0.4:  # 40% chance
-            words = cleaned[0].split()
-            if words:
-                first = words[0]
-                cleaned[0] = f"{first[0]}-{first} " + " ".join(words[1:])
+    # --- Step 4: Add stutter at start ---
+    if cleaned and random.random() < 0.4:
+        words = cleaned[0].split()
+        if words:
+            first = words[0]
+            cleaned[0] = f"{first[0]}-{first} " + " ".join(words[1:])
 
-    # --- Step 5: Send fragments with pauses ---
+    # --- Step 5: Send fragments safely ---
     for frag in cleaned:
-        await update.message.reply_text(frag.strip())
+        frag = frag.strip()
+        try:
+            if update and hasattr(update, "message") and update.message:
+                await update.message.reply_text(frag)
+            elif context and chat_id:
+                await context.bot.send_message(chat_id=chat_id, text=frag)
+            else:
+                print(f"Warning: No valid method to send message. Fragment: {frag}")
+        except Exception as e:
+            print(f"Failed to send fragment: {frag}\nError: {e}")
         await asyncio.sleep(delay)
 
 load_dotenv()  # Load environment variables from .env file
