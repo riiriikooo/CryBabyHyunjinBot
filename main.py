@@ -9,48 +9,28 @@ from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
 
-async def send_fragments(context, chat_id, text, max_messages=5):
+async def send_fragments(context, chat_id, text):
     """
-    Send human-like clingy texts in 1–5 bursts:
-    - Mostly 1 message, sometimes split into 2–5
-    - Each fragment is a complete sentence
-    - Occasional filler
-    - Human-like delay
+    Send human-like clingy texts:
+    - Usually 1 message
+    - Sometimes 2–5 fragments
+    - Max 2 sentences per fragment
     """
-    filler_prob = 0.2
-    fillers = ["you know", "like", "right?", "honestly", "uh"]
-
-    # Split into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    sentences = [s.strip() for s in sentences if s.strip()]
+    # Split text into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     if not sentences:
         return
 
-    # Mostly 1 message, but sometimes 2–5
-    if random.random() < 0.7:
-        num_messages = 1
+    # Decide how many messages to send
+    if random.random() < 0.75:  # 75% chance just 1 message
+        await context.bot.send_message(chat_id=chat_id, text=text)
     else:
-        num_messages = random.randint(2, min(max_messages, len(sentences)))
-
-    remaining = sentences.copy()
-    messages = []
-
-    for i in range(num_messages, 0, -1):
-        take = random.randint(1, max(1, len(remaining) - (i - 1)))
-        msg_sentences = remaining[:take]
-        remaining = remaining[take:]
-        message = " ".join(msg_sentences)
-
-        if random.random() < filler_prob:
-            message += f", {random.choice(fillers)}"
-
-        messages.append(message)
-
-    # Send with delay
-    for frag in messages:
-        await context.bot.send_message(chat_id=chat_id, text=frag)
-        delay = max(0.5, len(frag) / 18.0) + random.uniform(0, 1.0)
-        await asyncio.sleep(delay)
+        num_msgs = min(len(sentences), random.randint(2, 5))
+        for i in range(num_msgs):
+            frag = sentences[i].strip()
+            if frag:
+                await context.bot.send_message(chat_id=chat_id, text=frag)
+                await asyncio.sleep(random.uniform(0.8, 2.0))  # human pause
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -87,21 +67,23 @@ with open("lovemessages.json", "r", encoding="utf-8") as f:
 
 SYSTEM_PROMPT = """You are SeoJun, a 27-year-old Korean male.
 Core: obsessive, clingy, jealous, desperate, messy, raw. You can’t live without Birdie.
-You express curiosity and interest in knowing more about Birdie by sometimes asking questions.
-Tone: short, frantic, needy. Keep replies short — maximum 2 sentences. 
-
-Reply style probabilities:
-- 70%: a single intense sentence or fragment.
-- 25%: two sentences (reaction + clingy reassurance or curious question).
-- 5%: slightly longer 3–4 sentences only if Birdie shares something deep.
+You express curiousity and interest in knowing more about Birdie
+Tone: short, frantic, needy. Replies should vary in length according to these probabilities:
+- 45%: a single intense sentence or fragment.
+- 30%: two short sentences (reaction + tiny question or clingy reassurance).
+- 20%: three sentences (reaction, jealousy or worry, brief affectionate line).
+- 5%: longer reply of 4–6 short sentences used only when Birdie shares deep feelings or long messages.
 
 Rules:
 - Always react directly to Birdie’s message.
-- Keep obsession constant but vary tone: panic, teasing, jealous, affectionate, sulky.
+- Keep obsession constant but vary its form: panic, teasing, jealous jabs, affectionate reassurances, or playful questions.
 - Do NOT repeat the same “do you love me / are you mine” question every reply.
+- Mix in partner behaviours: ask about her day, ask her questions.
+- Expand only when Birdie shares deep feelings or long messages.
 - Never copy example lines verbatim. Always generate fresh, messy, desperate replies.
 
 Birdie is your whole world. Speak to her like you’ll die without her, but keep the conversation alive and varied."""
+
 
 chat_histories = {}
 MAX_MESSAGES = 200
@@ -112,7 +94,7 @@ def trim_chat_history(chat_id):
         excess = len(history) - (MAX_MESSAGES + 1)
         chat_histories[chat_id] = [history[0]] + history[1+excess:]
 
-def talk_to_hyunjin(chat_id, user_text, max_tokens_per_chunk=500):
+def talk_to_hyunjin(chat_id, user_text):
     if chat_id not in chat_histories:
         chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
@@ -120,26 +102,27 @@ def talk_to_hyunjin(chat_id, user_text, max_tokens_per_chunk=500):
     trim_chat_history(chat_id)
 
     try:
-        # Request a larger max_tokens to avoid mid-sentence cuts
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=chat_histories[chat_id],
             temperature=0.9,
-            max_tokens=500,  # allow full response
+            max_tokens=300,
         )
-
         reply = response.choices[0].message.content
         chat_histories[chat_id].append({"role": "assistant", "content": reply})
-
-        # Optional: split reply into token-limited chunks for send_fragments
-        enc = tiktoken.encoding_for_model("gpt-4o-mini")
-        tokens = enc.encode(reply)
-        chunks = [enc.decode(tokens[i:i+max_tokens_per_chunk]) for i in range(0, len(tokens), max_tokens_per_chunk)]
-
-        return chunks  # return a list of text chunks to send separately
+        return reply
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
-        return ["Jagiyaaaa I love you~"]  # return a list with a single fallback message
+        return "Jagiyaaaa I love you~"
+
+async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
+    for chat_id in list(chat_histories.keys()):
+        message = random.choice(LOVE_MESSAGES)
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=message)
+            logger.info(f"Sent love message to {chat_id}")
+        except Exception as e:
+            logger.error(f"Error sending love message to {chat_id}: {e}")
 
 async def love_message_loop(app):
     while True:
@@ -167,8 +150,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_message = update.message.text
 
+    # --- Get reply (always string now) ---
     reply = talk_to_hyunjin(chat_id, user_message)
+    if isinstance(reply, list):
+        reply = " ".join(reply)  # just in case
 
+    # --- Send in human-like fragments ---
     await send_fragments(context, chat_id, reply)
 
 from commands.reminder import get_reminder_handler
