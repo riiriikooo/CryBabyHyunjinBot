@@ -19,7 +19,9 @@ async def send_fragments(context, chat_id, text, max_messages=5):
     """
     # --- CONFIG ---
     filler_prob = 0.3
+    question_prob = 0.4  # 40% chance
     fillers = ["you know", "like", "right?", "honestly", "uh"]
+
 
     # --- Split text into complete sentences ---
     sentences = re.split(r'(?<=[.!?])\s+', text)
@@ -40,13 +42,27 @@ async def send_fragments(context, chat_id, text, max_messages=5):
         remaining_sentences = remaining_sentences[take:]
         message = " ".join(msg_sentences)
 
-        # Optionally add a filler
+        # Optional filler
         if random.random() < filler_prob:
             message += f", {random.choice(fillers)}"
 
+        # Optional random AI-generated question
+        if random.random() < question_prob:
+            prompt = "Ask a short, random, curious, obsessive question to Birdie about her life, thoughts, or feelings."
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are SeoJun, a clingy, obsessive lover."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=20,
+            )
+            question = response.choices[0].message.content.strip()
+            message += f" {question}"
+
         messages.append(message)
 
-    # --- Send messages with slight human-like delay ---
+    # Send messages with slight delay
     for frag in messages:
         await context.bot.send_message(chat_id=chat_id, text=frag)
         delay = max(0.5, len(frag)/18.0) + random.uniform(0, 1.0)
