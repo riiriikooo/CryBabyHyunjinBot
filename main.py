@@ -192,12 +192,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_message = update.message.text
-    print(f"Chat ID: {chat_id}")  # This will show your chat ID in the console
+    print(f"Chat ID: {chat_id}")  # Still useful for debugging
 
-    reply = talk_to_hyunjin(chat_id, user_message)
+    chunks = talk_to_hyunjin(chat_id, user_message)
 
-    # Send reply in human-like fragments
-    await send_fragments(context, chat_id, reply)
+    for chunk in chunks:
+        await send_fragments(context, chat_id, chunk)
 
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
