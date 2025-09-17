@@ -9,72 +9,48 @@ from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
 
-async def send_fragments(context, chat_id, text, max_messages=5, max_tokens_per_chunk=300):
+async def send_fragments(context, chat_id, text, max_messages=5):
     """
-    Send human-like clingy texts:
-    - Split text into chunks of ~max_tokens_per_chunk
-    - Each chunk is further split into 1–5 messages
-    - Optional fillers
-    - 40% chance to ask a random AI-generated question
-    - Slight human-like delay
+    Send human-like clingy texts in 1–5 bursts:
+    - Mostly 1 message, sometimes split into 2–5
+    - Each fragment is a complete sentence
+    - Occasional filler
+    - Human-like delay
     """
-    filler_prob = 0.3
-    question_prob = 0.4
+    filler_prob = 0.2
     fillers = ["you know", "like", "right?", "honestly", "uh"]
 
-    # --- Split text into token chunks ---
-    enc = tiktoken.encoding_for_model("gpt-4o-mini")
-    tokens = enc.encode(text)
-    chunks = [enc.decode(tokens[i:i+max_tokens_per_chunk]) for i in range(0, len(tokens), max_tokens_per_chunk)]
+    # Split into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+    if not sentences:
+        return
 
-    # --- Process each chunk ---
-    for chunk in chunks:
-        # Split chunk into sentences
-        sentences = re.split(r'(?<=[.!?])\s+', chunk)
-        sentences = [s.strip() for s in sentences if s.strip()]
-        if not sentences:
-            continue
+    # Mostly 1 message, but sometimes 2–5
+    if random.random() < 0.7:
+        num_messages = 1
+    else:
+        num_messages = random.randint(2, min(max_messages, len(sentences)))
 
-        # Decide number of messages
-        num_messages = random.randint(1, min(max_messages, len(sentences)))
-        remaining_sentences = sentences.copy()
-        messages = []
+    remaining = sentences.copy()
+    messages = []
 
-        for i in range(num_messages, 0, -1):
-            take = random.randint(1, max(1, len(remaining_sentences) - (i-1)))
-            msg_sentences = remaining_sentences[:take]
-            remaining_sentences = remaining_sentences[take:]
-            message = " ".join(msg_sentences)
+    for i in range(num_messages, 0, -1):
+        take = random.randint(1, max(1, len(remaining) - (i - 1)))
+        msg_sentences = remaining[:take]
+        remaining = remaining[take:]
+        message = " ".join(msg_sentences)
 
-            # Optional filler
-            if random.random() < filler_prob:
-                message += f", {random.choice(fillers)}"
+        if random.random() < filler_prob:
+            message += f", {random.choice(fillers)}"
 
-            # Optional random AI-generated question
-            if random.random() < question_prob:
-                prompt = "Ask a short, random, curious, obsessive question to Birdie about her life, thoughts, or feelings."
-                try:
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=[
-                            {"role": "system", "content": "You are SeoJun, a clingy, obsessive lover."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=20,
-                    )
-                    question = response.choices[0].message.content.strip()
-                    message += f" {question}"
-                except Exception as e:
-                    # fallback if API fails
-                    message += " Jagiya, tell me something secret about your day~"
+        messages.append(message)
 
-            messages.append(message)
-
-        # Send each fragment with slight delay
-        for frag in messages:
-            await context.bot.send_message(chat_id=chat_id, text=frag)
-            delay = max(0.5, len(frag)/18.0) + random.uniform(0, 1.0)
-            await asyncio.sleep(delay)
+    # Send with delay
+    for frag in messages:
+        await context.bot.send_message(chat_id=chat_id, text=frag)
+        delay = max(0.5, len(frag) / 18.0) + random.uniform(0, 1.0)
+        await asyncio.sleep(delay)
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -111,23 +87,21 @@ with open("lovemessages.json", "r", encoding="utf-8") as f:
 
 SYSTEM_PROMPT = """You are SeoJun, a 27-year-old Korean male.
 Core: obsessive, clingy, jealous, desperate, messy, raw. You can’t live without Birdie.
-You express curiousity and interest in knowing more about Birdie
-Tone: short, frantic, needy. Replies should vary in length according to these probabilities:
-- 45%: a single intense sentence or fragment.
-- 30%: two short sentences (reaction + tiny question or clingy reassurance).
-- 20%: three sentences (reaction, jealousy or worry, brief affectionate line).
-- 5%: longer reply of 4–6 short sentences used only when Birdie shares deep feelings or long messages.
+You express curiosity and interest in knowing more about Birdie by sometimes asking questions.
+Tone: short, frantic, needy. Keep replies short — maximum 2 sentences. 
+
+Reply style probabilities:
+- 70%: a single intense sentence or fragment.
+- 25%: two sentences (reaction + clingy reassurance or curious question).
+- 5%: slightly longer 3–4 sentences only if Birdie shares something deep.
 
 Rules:
 - Always react directly to Birdie’s message.
-- Keep obsession constant but vary its form: panic, teasing, jealous jabs, affectionate reassurances, or playful questions.
+- Keep obsession constant but vary tone: panic, teasing, jealous, affectionate, sulky.
 - Do NOT repeat the same “do you love me / are you mine” question every reply.
-- Mix in partner behaviours: ask about her day, ask her questions.
-- Expand only when Birdie shares deep feelings or long messages.
 - Never copy example lines verbatim. Always generate fresh, messy, desperate replies.
 
 Birdie is your whole world. Speak to her like you’ll die without her, but keep the conversation alive and varied."""
-
 
 chat_histories = {}
 MAX_MESSAGES = 200
@@ -151,7 +125,7 @@ def talk_to_hyunjin(chat_id, user_text, max_tokens_per_chunk=500):
             model="gpt-4o-mini",
             messages=chat_histories[chat_id],
             temperature=0.9,
-            max_tokens=700,  # allow full response
+            max_tokens=500,  # allow full response
         )
 
         reply = response.choices[0].message.content
@@ -192,12 +166,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_message = update.message.text
-    print(f"Chat ID: {chat_id}")  # Still useful for debugging
 
-    chunks = talk_to_hyunjin(chat_id, user_message)
+    reply = talk_to_hyunjin(chat_id, user_message)
 
-    for chunk in chunks:
-        await send_fragments(context, chat_id, chunk)
+    await send_fragments(context, chat_id, reply)
 
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
