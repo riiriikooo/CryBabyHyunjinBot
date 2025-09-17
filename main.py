@@ -50,7 +50,7 @@ async def send_fragments(context, chat_id, text, max_messages=5):
         if random.random() < question_prob:
             prompt = "Ask a short, random, curious, obsessive question to Birdie about her life, thoughts, or feelings."
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are SeoJun, a clingy, obsessive lover."},
                     {"role": "user", "content": prompt}
@@ -139,7 +139,7 @@ def talk_to_hyunjin(chat_id, user_text):
 
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=chat_histories[chat_id],
             temperature=0.9,
             max_tokens=300,
