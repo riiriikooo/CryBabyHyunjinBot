@@ -26,18 +26,21 @@ async def send_love(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Failed to send love to {chat_id}: {e}")
 
-    # Clean up so next schedule happens only when user messages again
-    JOB_STORE.pop(chat_id, None)
+    # Schedule next love message automatically (if user ignores)
+    delay_seconds = random_delay_seconds()
+    await schedule_love_for_chat(context.application, chat_id, delay_seconds=delay_seconds)
 
 async def schedule_love_for_chat(application, chat_id: int, delay_seconds=None):
     old_job = JOB_STORE.get(chat_id)
     if old_job:
         try:
-            old_job.schedule_removal()
+            old_job.remove()  # safer than schedule_removal for AsyncIOScheduler
         except Exception:
             pass
+
     if delay_seconds is None:
         delay_seconds = random_delay_seconds()
+        
     job = application.job_queue.run_once(send_love, when=delay_seconds, data=chat_id, name=str(chat_id))
     JOB_STORE[chat_id] = job
     logger.info(f"Scheduled love for {chat_id} in {delay_seconds//60}m {delay_seconds%60}s")
@@ -161,18 +164,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_message = update.message.text
 
-    # --- Get reply (always string now) ---
+    # --- Get reply ---
     reply = talk_to_hyunjin(chat_id, user_message)
     if isinstance(reply, list):
-        reply = " ".join(reply)  # just in case
+        reply = " ".join(reply)
 
     # --- Send in human-like fragments ---
     await send_fragments(context, chat_id, reply)
 
-    # Reschedule love message after this reply
+    # Reschedule love message after **this reply** (overrides previous schedule)
     delay = random_delay_seconds()
     await schedule_love_for_chat(context.application, chat_id, delay_seconds=delay)
-
+    
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
 from commands import song
