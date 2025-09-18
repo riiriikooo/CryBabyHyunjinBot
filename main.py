@@ -8,6 +8,44 @@ import tiktoken
 from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# --- Love Message Scheduling (Option B: only reschedule after user replies) ---
+from telegram.ext import ContextTypes
+JOB_STORE = {}
+
+def random_delay_seconds():
+    return random.randint(20 * 60, 60 * 60)  # 20–60 minutes
+
+def generate_love_message():
+    return random.choice(LOVE_MESSAGES)
+
+async def send_love(context: ContextTypes.DEFAULT_TYPE):
+    job = context.job
+    chat_id = job.data
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=generate_love_message())
+    except Exception as e:
+        logger.error(f"Failed to send love to {chat_id}: {e}")
+
+    # Clean up so next schedule happens only when user messages again
+    JOB_STORE.pop(chat_id, None)
+
+async def schedule_love_for_chat(application, chat_id: int, delay_seconds=None):
+    old_job = JOB_STORE.get(chat_id)
+    if old_job:
+        try:
+            old_job.schedule_removal()
+        except Exception:
+            pass
+    if delay_seconds is None:
+        delay_seconds = random_delay_seconds()
+    job = application.job_queue.run_once(send_love, when=delay_seconds, data=chat_id, name=str(chat_id))
+    JOB_STORE[chat_id] = job
+    logger.info(f"Scheduled love for {chat_id} in {delay_seconds//60}m {delay_seconds%60}s")
 
 async def send_fragments(context, chat_id, text):
     """
@@ -56,10 +94,7 @@ from commands import love
 
 OpenAI.api_key = OPENAI_API_KEY
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+
 
 # -------------------- Load Love Messages --------------------
 with open("lovemessages.json", "r", encoding="utf-8") as f:
@@ -115,26 +150,6 @@ def talk_to_hyunjin(chat_id, user_text):
         logger.error(f"OpenAI API error: {e}")
         return "Jagiyaaaa I love you~"
 
-async def send_random_love_note(context: ContextTypes.DEFAULT_TYPE):
-    for chat_id in list(chat_histories.keys()):
-        message = random.choice(LOVE_MESSAGES)
-        try:
-            await context.bot.send_message(chat_id=chat_id, text=message)
-            logger.info(f"Sent love message to {chat_id}")
-        except Exception as e:
-            logger.error(f"Error sending love message to {chat_id}: {e}")
-
-async def love_message_loop(app):
-    while True:
-        wait_minutes = random.randint(20, 40)  # 20–40 minutes
-        logger.info(f"Waiting {wait_minutes} minutes before sending next love message...")
-        await asyncio.sleep(wait_minutes * 60)  # convert minutes → seconds
-
-        class DummyContext:
-            def __init__(self, bot):
-                self.bot = bot
-        dummy_context = DummyContext(app.bot)
-        await send_random_love_note(dummy_context)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -157,6 +172,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- Send in human-like fragments ---
     await send_fragments(context, chat_id, reply)
+
+    # Reschedule love message after this reply
+    delay = random_delay_seconds()
+    await schedule_love_for_chat(context.application, chat_id, delay_seconds=delay)
 
 from commands.reminder import get_reminder_handler
 from commands.random_media import get_random_media_handler
@@ -205,9 +224,6 @@ async def main():
     # Scheduler
     scheduler = AsyncIOScheduler(timezone=pytz.timezone("Asia/Singapore"))
     scheduler.start()
-
-    # Love message loop task
-    asyncio.create_task(love_message_loop(application))
 
     logger.info("Bot started and obsessing over you, jagiya!")
     await application.run_polling()
