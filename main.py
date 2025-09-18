@@ -87,8 +87,6 @@ from commands.crime import get_crime_handler
 
 from commands import love
 
-OpenAI.api_key = OPENAI_API_KEY
-
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
@@ -182,7 +180,6 @@ from commands.budget import get_budget_handler
 from commands import game
 from telegram.ext import CommandHandler, PollAnswerHandler
     
-from telegram.ext import CommandHandler
 
 async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
