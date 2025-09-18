@@ -8,11 +8,6 @@ import tiktoken
 from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
 # --- Love Message Scheduling (Option B: only reschedule after user replies) ---
 from telegram.ext import ContextTypes
 JOB_STORE = {}
@@ -94,7 +89,10 @@ from commands import love
 
 OpenAI.api_key = OPENAI_API_KEY
 
-
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 # -------------------- Load Love Messages --------------------
 with open("lovemessages.json", "r", encoding="utf-8") as f:
