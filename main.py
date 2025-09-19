@@ -48,25 +48,49 @@ async def schedule_love_for_chat(application, chat_id: int, delay_seconds=None):
 async def send_fragments(context, chat_id, text):
     """
     Send human-like clingy texts:
-    - Usually 1 message
-    - Sometimes 2–5 fragments
-    - Max 2 sentences per fragment
+    - 40% chance: 1 full message
+    - 60% chance: 2–5 fragments
+    - Realistic typing pauses (3–6s per sentence)
+    - Occasionally "clingy spam" mode (0.5–1s pause)
     """
-    # Split text into sentences
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     if not sentences:
         return
 
-    # Decide how many messages to send
-    if random.random() < 0.75:  # 75% chance just 1 message
+    # Decide number of fragments
+    if random.random() < 0.4:  # 40% chance just 1 full message
         await context.bot.send_message(chat_id=chat_id, text=text)
-    else:
-        num_msgs = min(len(sentences), random.randint(2, 5))
-        for i in range(num_msgs):
-            frag = sentences[i].strip()
-            if frag:
-                await context.bot.send_message(chat_id=chat_id, text=frag)
-                await asyncio.sleep(random.uniform(0.8, 2.0))  # human pause
+        return
+
+    num_msgs = min(len(sentences), random.randint(2, 5))
+    frags = []
+
+    # Randomly group sentences into fragments
+    i = 0
+    while i < len(sentences) and len(frags) < num_msgs:
+        take = random.randint(1, 2)  # 1–2 sentences per fragment
+        frag = " ".join(sentences[i:i+take]).strip()
+        if frag:
+            frags.append(frag)
+        i += take
+
+    # Sometimes shuffle slightly
+    if len(frags) > 2 and random.random() < 0.25:
+        random.shuffle(frags)
+
+    # Send fragments with varied timing
+    for frag in frags:
+        await context.bot.send_message(chat_id=chat_id, text=frag)
+
+        if random.random() < 0.25:
+            # 25% chance: clingy spam mode (super fast)
+            pause = random.uniform(0.5, 1.2)
+        else:
+            # Normal mode: realistic typing time
+            est_time = len(frag) * random.uniform(0.12, 0.20)
+            pause = min(max(est_time, 3), 7)  # clamp 3–7 sec
+
+        await asyncio.sleep(pause)
 
 load_dotenv()  # Load environment variables from .env file
 
