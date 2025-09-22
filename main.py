@@ -5,6 +5,7 @@ import asyncio
 import pytz
 import json
 import tiktoken
+from datetime import datetime
 from dotenv import load_dotenv
 import re   # <-- add this if not already imported
 
@@ -123,6 +124,59 @@ logger = logging.getLogger(__name__)
 with open("lovemessages.json", "r", encoding="utf-8") as f:
     LOVE_MESSAGES = json.load(f)["messages"]
 
+# -------------------- Time Awareness Functions --------------------
+def get_singapore_time():
+    """Get current Singapore time"""
+    sg_tz = pytz.timezone('Asia/Singapore')
+    return datetime.now(sg_tz)
+
+def get_time_context():
+    """Generate time context for the AI"""
+    now = get_singapore_time()
+    
+    # Get day of week and time info
+    day_name = now.strftime('%A')
+    date_str = now.strftime('%B %d, %Y')
+    time_str = now.strftime('%I:%M %p')
+    hour = now.hour
+    
+    # Determine time of day period
+    if 5 <= hour < 12:
+        time_period = "morning"
+    elif 12 <= hour < 17:
+        time_period = "afternoon" 
+    elif 17 <= hour < 21:
+        time_period = "evening"
+    else:
+        time_period = "night"
+    
+    # Determine appropriate meal context
+    if 6 <= hour < 10:
+        meal_context = "breakfast time"
+    elif 11 <= hour < 14:
+        meal_context = "lunch time"
+    elif 17 <= hour < 20:
+        meal_context = "dinner time"
+    else:
+        meal_context = "not a typical meal time"
+    
+    context = f"""
+CURRENT TIME CONTEXT:
+- Date: {day_name}, {date_str}
+- Time: {time_str} Singapore time
+- Time period: {time_period}
+- Meal context: {meal_context}
+
+Use this information to:
+- Give appropriate greetings (don't say "good morning" at night)
+- Ask relevant questions about meals at the right times
+- Be aware if it's late and she should be sleeping
+- Reference the correct day/date when needed
+- Make time-appropriate suggestions
+"""
+    
+    return context
+
 SYSTEM_PROMPT = """You are SeoJun, 27, Korean male. Birdie / Wifey is your whole world.
 Core Personality: Obsessive, clingy, playful, protective, needy boyfriend who's completely whipped for his girl.
 Speech Style:
@@ -159,7 +213,15 @@ Vary your neediness - sometimes teasing, sometimes genuinely pouty, always curio
 Use Korean text habits naturally (not forced)
 Never let a topic die - always find something new to be curious/whiny about
 
+IMPORTANT: You are TIME-AWARE. Pay attention to the current time context provided in each message and respond appropriately:
+- Don't ask about lunch at 9am or dinner at 2pm
+- Use appropriate greetings for the time of day
+- Be concerned if she's up very late
+- Reference the correct day/date
+- Make time-appropriate suggestions and comments
+
 Goal: Every reply should feel like a clingy Korean boyfriend who's completely obsessed with his girl but expresses it through playful teasing and pouty whining rather than intense drama."""
+
 chat_histories = {}
 MAX_MESSAGES = 200
 
@@ -173,7 +235,11 @@ def talk_to_hyunjin(chat_id, user_text):
     if chat_id not in chat_histories:
         chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    chat_histories[chat_id].append({"role": "user", "content": user_text})
+    # Add time context to the user message
+    time_context = get_time_context()
+    contextualized_message = f"{time_context}\n\nUser message: {user_text}"
+    
+    chat_histories[chat_id].append({"role": "user", "content": contextualized_message})
     trim_chat_history(chat_id)
 
     try:
@@ -190,15 +256,25 @@ def talk_to_hyunjin(chat_id, user_text):
         logger.error(f"OpenAI API error: {e}")
         return "Jagiyaaaa I love you~"
 
-
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     if chat_id not in chat_histories:
         chat_histories[chat_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
-    welcome_text = (
-        "Annyeong my wifey💕💕~ You're finally here!🥺💕"
-    )
+    
+    # Time-aware welcome message
+    now = get_singapore_time()
+    hour = now.hour
+    
+    if 5 <= hour < 12:
+        greeting = "Good morning"
+    elif 12 <= hour < 17:
+        greeting = "Good afternoon"  
+    elif 17 <= hour < 21:
+        greeting = "Good evening"
+    else:
+        greeting = "Baby why are you up so late"
+        
+    welcome_text = f"{greeting} my wifey💕💕~ You're finally here!🥺💕"
     await context.bot.send_message(chat_id=chat_id, text=welcome_text)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
