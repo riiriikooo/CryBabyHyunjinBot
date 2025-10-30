@@ -393,12 +393,7 @@ async def main():
     application.add_handler(CommandHandler("start", start))
     logger.info("✓ /start command registered")
     
-    # Reminder conversation handler
-    reminder_handler = get_reminder_handler()
-    application.add_handler(reminder_handler)
-    logger.info("✓ Reminder handler registered")
-    
-    # Message handler (must be last)
+    # Message handler
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("✓ Message handler registered")
     
