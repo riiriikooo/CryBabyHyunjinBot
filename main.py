@@ -9,10 +9,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from telegram import Update
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler
+    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 )
-
-from commands.reminder import get_reminder_handler
 
 load_dotenv()
 
