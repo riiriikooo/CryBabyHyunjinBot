@@ -249,7 +249,7 @@ REMEMBER - Ari's Character:
     try:
         logger.info(f"Calling Grok API via OpenRouter for {chat_id}...")
         response = client.chat.completions.create(
-            model="x-ai/grok-4.1-fast:free",
+            model="x-ai/grok-4.1-fast",
             messages=chat_histories[chat_id],
             temperature=0.9,
             max_tokens=400,
